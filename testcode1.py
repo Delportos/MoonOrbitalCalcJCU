@@ -42,8 +42,8 @@ def update(frame):
     vCraft = vCraft + acceleration * deltat
     posCraft = posCraft + vCraft * deltat
 
-    lineSC.set_xdata(posCraft[0])
-    lineSC.set_ydata(posCraft[1])
+    lineSC.set_xdata([posCraft[0]])
+    lineSC.set_ydata([posCraft[1]])
     return lineSC,
 
 ani = animation.FuncAnimation(
