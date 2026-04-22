@@ -57,7 +57,7 @@ earthCirc = plt.Circle((0, 0), rEarth, color='blue', fill=True)
 moonCirc = plt.Circle((posMoon[0], posMoon[1]), rMoon, color='gray', fill=True)
 ax.add_patch(earthCirc)
 ax.add_patch(moonCirc)
-trailSC = ax.plot(craftx, crafty, 'r-', lw=1)[0]
+trailSC = ax.plot(craftx, crafty, 'r--', lw=1)[0]
 
 def checktime(frame): #checks time based upon frame number 
     elapsedtimeh = frame // 3600
@@ -102,7 +102,7 @@ def update(frame):
     
     craftx.append(posCraft[0])
     crafty.append(posCraft[1])
-    if len(craftx) > 1000: #limit the length of the trail to 1000 points
+    if len(craftx) > 2000: #limit the length of the trail to 2000 points
         craftx.pop(0)
         crafty.pop(0)
     trailSC.set_xdata(craftx)
