@@ -4,3 +4,10 @@ Stuff to get working
 - Thrust adjustment x
 - Line to track spacecraft orbit x
 - ...
+
+
+4.29
+- FE or some other approx. of upcoming trajectory
+- Mass flow and burn verification
+- Graphs that tell us things
+- Better way to plot trajectories?
