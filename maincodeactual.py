@@ -12,9 +12,10 @@ mCraft = 1e4 # 10 metric tons
 rEarth = 6.4e6 # Earth radius in meters
 h = 4e5 # 400 km circular orbit
 massPayload = 1e4 #mass of payload in kg
-massFuel = 1e4 # mass of fuel in kg
+massFuel = 26298.85 # mass of fuel in kg
 wetMass =  massPayload + massFuel
-isp = 350. #specific impulse of rocket
+isp = 340. #specific impulse of rocket
+burntime = 600. #seconds
 
 #moon
 mMoon = 7.35e22 #Mass Moon kg
