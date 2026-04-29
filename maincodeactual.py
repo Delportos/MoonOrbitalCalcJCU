@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from pyparsing import line
+
 
 
 # Constants
@@ -15,7 +15,10 @@ massPayload = 1e4 #mass of payload in kg
 massFuel = 26298.85 # mass of fuel in kg
 wetMass =  massPayload + massFuel
 isp = 340. #specific impulse of rocket
-burntime = 600. #seconds
+burntime = 60000. #seconds
+mdot = massFuel / burntime
+exhaustv = 9.81 * isp
+
 
 #moon
 mMoon = 7.35e22 #Mass Moon kg
@@ -24,9 +27,12 @@ d = 384.4e6 #km distance Earth to Moon
 #thrust
 t = 0 # Time in seconds
 deltat = 1 # time step in seconds
-tstart = 4200
-tend = 4300
-thrustmag = 30. #m/s^2 scalar val 
+tstart = 4070
+burntimediff = 10
+tend = tstart + burntimediff
+
+thrustmag = exhaustv * mdot #m/s^2 scalar val 
+print(thrustmag)
 thrustx = 0.0 #m/s/s added in x direction
 thrusty = 0.0 #m/s/s added in the y direction
 thrust = np.array([0.,0.4])
@@ -67,15 +73,22 @@ def checktime(frame): #checks time based upon frame number
     return elapsedtimeh, elapsedtimem, elapsedtimes
 
 def update(frame):
-    global posCraft, vCraft, posMoon, vMoon, t
+    global posCraft, vCraft, posMoon, vMoon, t,mCraft
     elapsedtimeh, elapsedtimem, elapsedtimes = checktime(frame) #frame == time
     r = posCraft - posEarth #r vector earth to craft
     rSCM = posCraft - posMoon 
     rMag = np.linalg.norm(r) #mag of r vector
+    rSCMMag = np.linalg.norm(rSCM)
+    rSCMhat = rSCM / rSCMMag
+    magFscm = (G*mMoon*mCraft) / (rSCMMag **2)
     rhat = r / rMag # direction of r vector
-    magF = (G * mEarth * mCraft) / (rMag ** 2)
-    gF = -magF * rhat
-    acceleration = gF / mCraft
+    magFe = (G * mEarth * mCraft) / (rMag ** 2)
+    
+    gFe = -magFe * rhat
+    gFm = -magFscm * rSCMhat
+    accelerationE = gFe / mCraft
+    accelerationM = gFm / mCraft
+    acceleration = accelerationE + accelerationM
     vCraft = vCraft + acceleration * deltat
    
     if t > tstart and t < tend:
@@ -83,6 +96,17 @@ def update(frame):
         vhat = vCraft / vMag #direction of velocity vector
         thrust = vhat * thrustmag  #direction of thrust along velocity vector ##note: ran this line through claude because I initially had thrust split into thrustx and y, and it was making a matrix instead of a 2d vector
         vCraft = vCraft + thrust*deltat # change in velocity due to thrust # prograde vector
+        mCraft -= mdot * deltat # mass flow subtracted from craft
+
+        print("Thrust applied at time: " + str(elapsedtimeh) + " hours, " + str(elapsedtimem) + " minutes, " + str(elapsedtimes) + " seconds")
+
+    if t > 25500 and t < 25520:
+        vMag = np.linalg.norm(vCraft) #magnitude of velocity vector
+        vhat = vCraft / vMag #direction of velocity vector
+        thrust = -vhat * thrustmag  #direction of thrust along velocity vector ##note: ran this line through claude because I initially had thrust split into thrustx and y, and it was making a matrix instead of a 2d vector
+        vCraft = vCraft + thrust*deltat # change in velocity due to thrust # prograde vector
+        mCraft -= mdot * deltat # mass flow subtracted from craft
+
         print("Thrust applied at time: " + str(elapsedtimeh) + " hours, " + str(elapsedtimem) + " minutes, " + str(elapsedtimes) + " seconds")
         
     posCraft = posCraft + vCraft * deltat
@@ -109,8 +133,8 @@ def update(frame):
     trailSC.set_xdata(craftx)
     trailSC.set_ydata(crafty)
     distanceSCtoMoon = np.linalg.norm(rSCM)
-    if frame % 100 == 0: #print distance every 100 seconds
-        print("Distance from spacecraft to moon: " + str(distanceSCtoMoon))
+    if frame % 150 == 0: #print distance every 100 seconds
+        print("Distance from spacecraft to moon: " + str(distanceSCtoMoon / 1000)  + " km" + "Time:" + str(t))
     if pMag < rEarth+1e5:
         print("Craft has crashed into Earth!" "Time of crash: " + str(elapsedtimeh) + " hours, " + str(elapsedtimem) + " minutes, " + str(elapsedtimes) + " seconds")
         ani.event_source.stop()
@@ -122,7 +146,7 @@ def update(frame):
 ani = animation.FuncAnimation(
     fig, update,
     frames=range(0, 10801, deltat),
-    blit=False, interval=0.0002 #blit has to be false, or we get weird artifacts
+    blit=False, interval=0.0000002 #blit has to be false, or we get weird artifacts
 )
 
 
