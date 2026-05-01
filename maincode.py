@@ -1,29 +1,50 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from pyparsing import line
+
 
 
 # Constants
-#Eatr
+#Earth
 G = 6.7e-11 # Gravitation constant 
 mEarth = 6e24 #Mass of earth
 mCraft = 1e4 # 10 metric tons
 rEarth = 6.4e6 # Earth radius in meters
-h = 400e3 # 400 km circular orbit
+h = 4e5 # 400 km circular orbit
+massPayload = 1e4 #mass of payload in kg
+massFuel = 26298.85 # mass of fuel in kg
+wetMass =  massPayload + massFuel
+isp = 340. #specific impulse of rocket
+burntime = 60000. #seconds
+mdot = massFuel / burntime
+exhaustv = 9.81 * isp
+
 
 #moon
 mMoon = 7.35e22 #Mass Moon kg
 rMoon = 1.737e6 #Moon radius km
 d = 384.4e6 #km distance Earth to Moon
-
+#thrust
 t = 0 # Time in seconds
 deltat = 1 # time step in seconds
+tstart = 4070
+burntimediff = 10
+tend = tstart + burntimediff
+
+thrustmag = exhaustv * mdot #m/s^2 scalar val 
+print(thrustmag)
+thrustx = 0.0 #m/s/s added in x direction
+thrusty = 0.0 #m/s/s added in the y direction
+thrust = np.array([0.,0.4])
+
+
 posEarth = np.array([0,0]) # Earth position
 vCraft = np.array([0,7.66e3]) # Orbital Velocity in m/s ()
 posCraft = np.array([rEarth + h, 0]) # Initial position of craft
 posMoon = np.array ([d,0])
 vMoon = np.array([0,1.022e3])
+craftx = []
+crafty = []
 
 # init axes    
 fig, ax=plt.subplots()
@@ -35,15 +56,16 @@ ax.set_xlim(-5e8, 5e8)
 ax.set_ylim(-5e8, 5e8)
 ax.set_aspect('equal')
 lineE = ax.plot(posEarth[0], posEarth[1], 'bo')[0]
-lineSC = ax.plot(posCraft[0], posCraft[1], 'ro')[0]
-lineM = ax.plot(posMoon[0], posMoon[1], 'go')[0]
+lineSC = ax.plot(posCraft[0], posCraft[1], 'ro-')[0]
+#lineM = ax.plot(posMoon[0], posMoon[1], 'go')[0] (commented out so dot doesnt show up over patch)
 
-#radii for earth and moon
+#radii visualization for earth and moon
 earthCirc = plt.Circle((0, 0), rEarth, color='blue', fill=True)
 moonCirc = plt.Circle((posMoon[0], posMoon[1]), rMoon, color='gray', fill=True)
 ax.add_patch(earthCirc)
 ax.add_patch(moonCirc)
-   
+trailSC = ax.plot(craftx, crafty, 'r--', lw=1)[0]
+
 def checktime(frame): #checks time based upon frame number 
     elapsedtimeh = frame // 3600
     elapsedtimem = (frame % 3600) // 60
@@ -51,22 +73,47 @@ def checktime(frame): #checks time based upon frame number
     return elapsedtimeh, elapsedtimem, elapsedtimes
 
 def update(frame):
-    global posCraft, vCraft, posMoon, vMoon
-
-    elapsedtimeh, elapsedtimem, elapsedtimes = checktime(frame)
- 
-
-    r = posCraft - posEarth
-    rMag = np.linalg.norm(r)
-    rhat = r / rMag
-    magF = (G * mEarth * mCraft) / (rMag ** 2)
-    gF = -magF * rhat
-    acceleration = gF / mCraft
-    if frame > 3600 or frame < 7200:
-        vCraft = vCraft + np.array([0,0.4])
+    global posCraft, vCraft, posMoon, vMoon, t,mCraft
+    elapsedtimeh, elapsedtimem, elapsedtimes = checktime(frame) #frame == time
+    r = posCraft - posEarth #r vector earth to craft
+    rSCM = posCraft - posMoon 
+    rMag = np.linalg.norm(r) #mag of r vector
+    rSCMMag = np.linalg.norm(rSCM)
+    rSCMhat = rSCM / rSCMMag
+    magFscm = (G*mMoon*mCraft) / (rSCMMag **2)
+    rhat = r / rMag # direction of r vector
+    magFe = (G * mEarth * mCraft) / (rMag ** 2)
+    
+    gFe = -magFe * rhat
+    gFm = -magFscm * rSCMhat
+    accelerationE = gFe / mCraft
+    accelerationM = gFm / mCraft
+    acceleration = accelerationE + accelerationM
     vCraft = vCraft + acceleration * deltat
+   
+    if t > tstart and t < tend:
+        vMag = np.linalg.norm(vCraft) #magnitude of velocity vector
+        vhat = vCraft / vMag #direction of velocity vector
+        thrust = vhat * thrustmag  #direction of thrust along velocity vector ##note: ran this line through claude because I initially had thrust split into thrustx and y, and it was making a matrix instead of a 2d vector
+        vCraft = vCraft + thrust*deltat # change in velocity due to thrust # prograde vector
+        mCraft -= mdot * deltat # mass flow subtracted from craft
+
+        print("Thrust applied at time: " + str(elapsedtimeh) + " hours, " + str(elapsedtimem) + " minutes, " + str(elapsedtimes) + " seconds")
+
+    if t > 25500 and t < 25533:
+        vMag = np.linalg.norm(vCraft) #magnitude of velocity vector
+        vhat = vCraft / vMag #direction of velocity vector
+        thrust = -vhat * thrustmag  #direction of thrust along velocity vector ##note: ran this line through claude because I initially had thrust split into thrustx and y, and it was making a matrix instead of a 2d vector
+        vCraft = vCraft + thrust*deltat # change in velocity due to thrust # prograde vector
+        mCraft -= mdot * deltat # mass flow subtracted from craft
+
+        print("Thrust applied at time: " + str(elapsedtimeh) + " hours, " + str(elapsedtimem) + " minutes, " + str(elapsedtimes) + " seconds")
+        
     posCraft = posCraft + vCraft * deltat
     pMag = np.linalg.norm(posCraft)
+    pmoonMag = np.linalg.norm(posCraft - posMoon)
+
+
 
     lineSC.set_xdata([posCraft[0]])
     lineSC.set_ydata([posCraft[1]])
@@ -79,26 +126,50 @@ def update(frame):
     acceleration = gF / mMoon
     vMoon = vMoon + acceleration * deltat
     posMoon = posMoon + vMoon * deltat
-    moonCirc.center = (posMoon[0], posMoon[1])
-
-    lineM.set_xdata([posMoon[0]])
-    lineM.set_ydata([posMoon[1]])
-
     moonCirc.center = (posMoon[0], posMoon[1]) #updates the moon radius
     
-    
-
-    if pMag < rEarth:
+    craftx.append(posCraft[0])
+    crafty.append(posCraft[1])
+    if len(craftx) > 2000: #limit the length of the trail to 2000 points
+        craftx.pop(0)
+        crafty.pop(0)
+    trailSC.set_xdata(craftx)
+    trailSC.set_ydata(crafty)
+    distanceSCtoMoon = np.linalg.norm(rSCM)
+    if frame % 150 == 0: #print distance every 100 seconds
+        print("Distance from spacecraft to moon: " + str(distanceSCtoMoon / 1000)  + " km" + "Time:" + str(t))
+    if pMag < rEarth+1e5:
         print("Craft has crashed into Earth!" "Time of crash: " + str(elapsedtimeh) + " hours, " + str(elapsedtimem) + " minutes, " + str(elapsedtimes) + " seconds")
-        exit()
+        ani.event_source.stop()
+    if pmoonMag < rMoon+1e3:
+        print("Craft has crashed into the Moon! Time of crash: " + str(elapsedtimeh) + " hours, " + str(elapsedtimem) + " minutes, "  + str(elapsedtimes) + " seconds")
+        ani.event_source.stop()
+    t += deltat
 
-    return lineSC, moonCirc #updates position of the spacecraft, and the moon patch
+    return lineSC, moonCirc,trailSC,t #updates position of the spacecraft, and the moon patch
 
 
 ani = animation.FuncAnimation(
     fig, update,
     frames=range(0, 10801, deltat),
-    blit=True, interval=20
+    blit=False, interval=0.000000000000000000000000002 #blit has to be false, or we get weird artifacts
 )
 
+
 plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
