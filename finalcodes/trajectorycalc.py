@@ -83,20 +83,16 @@ def TrajecOptimizerBurn1(startburn1,deltab1,posCraft,posEarth,posMoon,vCraft,vMo
         #Crash Checks
         if np.linalg.norm(posCraft) < rEarth + 1e5:
             print(f"Crashed at t={t}s")
-            crashed = True
-            crash_step = 1
             break
         if np.linalg.norm(dscm) < rMoon:
             print(f"Crashed into at t={t}s")
-            crashed = True
-            crash_step = 1
             break
 
-    if crashed:
-        craft_pos = craft_pos[:crash_step+1]
-        moon_pos = moon_pos[:crash_step+1]
-        craft_mass = craft_mass[:crash_step+1]
-        times = times[:crash_step+1]
+   # if crashed:
+    #    craft_pos = craft_pos[:crash_step+1]
+     #   moon_pos = moon_pos[:crash_step+1]
+      #  craft_mass = craft_mass[:crash_step+1]
+       # times = times[:crash_step+1]
 
     #deltav calculation
     
@@ -174,29 +170,20 @@ def TrajecOptimizerBurn2(startburn1,deltab1,startburn2, deltab2,posCraft,posEart
         craft_mass[i] = mCraft
         craft_vel[i] = vCraft
         dscm[i] = np.linalg.norm(posCraft - posMoon)
-        if t < startburn2+deltab2:
+        if t < startburn2+deltab2: #pre brun
             orbitaldscm[i] = -1
         else:
-            orbitaldscm[i] = np.linalg.norm(posCraft - posMoon)
+            orbitaldscm[i] = np.linalg.norm(posCraft - posMoon) # done with all burns, final ORBIT
 
         #Crash Checks
         if np.linalg.norm(posCraft) < rEarth + 1e5:
             print(f"Crashed at t={t}s")
-            crashed = True
-            crash_step = 1
             break
         if np.linalg.norm(dscm) < rMoon:
             print(f"Crashed into at t={t}s")
-            crashed = True
-            crash_step = 1
             break
 
-    if crashed:
-        craft_pos = craft_pos[:crash_step+1]
-        moon_pos = moon_pos[:crash_step+1]
-        craft_mass = craft_mass[:crash_step+1]
-        times = times[:crash_step+1]
-
+    
     #deltav calculation
     
     mf = mCraft
@@ -240,8 +227,7 @@ for t in tstarttrials:
 #best perilune dscm thats lowest 
 
 target = rMoon + 600e3
-closestapproachidx = min(range(len(lclosestapproaches)), 
-                         key=lambda i: abs(lclosestapproaches[i] - target))
+closestapproachidx = min(range(len(lclosestapproaches)), key=lambda i: abs(lclosestapproaches[i] - target))
 
 
 deltab2 = 90
