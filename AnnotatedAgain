@@ -6,7 +6,7 @@ from trajectory import CraftAccel, moonAccel
 G = 6.7e-11 #Gravitational constant in m^3/(kg*s^2)
 mEarth = 6e24 #Mass of Earth in kg
 rEarth = 6.4e6 #Radius of Earth in meters
-h = 4e5 # 
+h = 4e5 # height of spacecraft above earth's surface
 massPayload = 1e4 #Dry mass of the spacecraft in kg
 massFuel = 26298.85 #Mass of fuel in kg
 wetMass = massPayload + massFuel  #Total starting mass
@@ -28,7 +28,7 @@ t2delta= 90 #Length of second burn in seconds
 tstart2 = 200320 #Starting time of the second burn in seconds
 tend2 = tstart2 +t2delta #Ending time of the burn in seconds
 
-#tstart3,tend3 = 28700,28720
+
 
 # Sim params
 dt = 1 #Time step in seconds
@@ -156,8 +156,6 @@ if __name__ == "__main__": #if this file is being directly run, the following ru
          (tend,    'Burn 1 end',    'red',    +1), #Burn 1 End
          (tstart2, 'Burn 2 start',  'orange', -1), #Burn 2 Start
          (tend2,   'Burn 2 end',    'orange', -1), #Burn 2 End
-         (tstart3, 'Burn 3 start',  'purple', -1), #Burn 3 Start
-         (tend3,   'Burn 3 end',    'purple', -1), #Burn 3 End
      ]
      
      for t_burn, label, color, sign in burns: #
