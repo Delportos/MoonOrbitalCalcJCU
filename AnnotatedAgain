@@ -1,0 +1,224 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from trajectory import CraftAccel, moonAccel
+
+# Constants
+G = 6.7e-11 #Gravitational constant in m^3/(kg*s^2)
+mEarth = 6e24 #Mass of Earth in kg
+rEarth = 6.4e6 #Radius of Earth in meters
+h = 4e5 # 
+massPayload = 1e4 #Dry mass of the spacecraft in kg
+massFuel = 26298.85 #Mass of fuel in kg
+wetMass = massPayload + massFuel  #Total starting mass
+isp = 340. #Specific impulse of the engine in seconds
+burntime = 600. #Total burn time in seconds
+mdot = massFuel / burntime  #Fuel mass flow rate in kg/s
+exhaustv = 9.81 * isp #Exhaust velocity in m/s 
+thrustmag = exhaustv * mdot #Thrust magnitude in N
+
+mMoon = 7.35e22  #Mass of Moon in kg
+rMoon = 1.737e6 #Radius of Moon in meters
+d = 384.4e6 #Distance of Moon to earth in meters
+
+t1delta = 520  #Length of first burn in seconds
+tstart =  3130  #Starting time of the first burn in seconds
+tend = tstart+t1delta  #Ending time of the burn in secodns 
+
+t2delta= 90 #Length of second burn in seconds
+tstart2 = 200320 #Starting time of the second burn in seconds
+tend2 = tstart2 +t2delta #Ending time of the burn in seconds
+
+#tstart3,tend3 = 28700,28720
+
+# Sim params
+dt = 1 #Time step in seconds
+t_total = 4e5 #Total run time (Change to however long we make it for the presentation)
+n_steps = int(t_total / dt) #Number of steps as an interger
+
+# Initial state
+posCraft = np.array([rEarth + h, 0.0]) # Initial position of the spacecraft
+vCraft   = np.array([0.0, 7.66e3]) #Initial velocity of the spacecraft
+posMoon  = np.array([d, 0.0]) #Initial position of the Moon
+vMoon    = np.array([0.0, 1.022e3]) #Initial velocity of the Moon
+mCraft   = wetMass #Mass of the spacecraft
+posEarth = np.array([0.0, 0.0]) #Initial position of the Earth (Assuming it is fixed at (0,0)
+
+# Preallocated history arrays
+craft_pos = np.zeros((n_steps, 2)) #Stores spacecraft position
+moon_pos  = np.zeros((n_steps, 2)) #Stores Moon position
+craft_mass = np.zeros(n_steps) #Stores mass number
+craft_vel = np.zeros((n_steps, 2)) #Stores velocity of the spacecraft
+times = np.arange(n_steps) * dt #Creates an array of time values
+dscm = np.zeros((n_steps,1)) #Stores distance between spacecraft and moon
+
+crashed = False #Initially spacecraft is not crashed
+crash_step = None #
+
+def CraftAccel(posCraft, posEarth,posMoon): #Def function to calculate spacecraft's acceleration
+    # Gravity from Earth on craft
+    r_e = posCraft - posEarth #Vector of Earth to spacecraft
+    r_e_mag = np.linalg.norm(r_e) #Distance of Earth to spacecraft
+    a_earth = -G * mEarth * r_e / r_e_mag**3   # combines rhat and 1/r^2 for Earth's gravity
+
+    # Gravity from Moon on craft
+    r_m = posCraft - posMoon #Vector of Moon to Spacecraft
+    r_m_mag = np.linalg.norm(r_m) #Distance of Moon to spacecraft
+    a_moon = -G * mMoon * r_m / r_m_mag**3 #combines rhat and 1/r^2 for Moon's gravity
+
+    acceleration = a_earth + a_moon #acc1; Total acceleration of the spacecraft due to Earrth and Moon's gravity
+    return acceleration #Returns the spacecraft's acceleration value
+
+def moonAccel(posMoon,posEarth): #Def function to calculate Moon's acceleration
+    r = posMoon - posEarth #Vector of Earth to Moon
+    rmag = np.linalg.norm(r) #Distance of Earth to Moon
+    a = -G*mEarth*r / rmag**3 #combines rhat and 1/r^2 for Moon's acceleration
+
+    return a #Returns the Moon's acceleration value
+
+if __name__ == "__main__":
+
+    for i in range(n_steps): #
+        t = i * dt #Adds a tick to the t count
+
+        a_craft = CraftAccel(posCraft,posEarth,posMoon)# Gravity from Earth on craft
+        a_moon = moonAccel(posMoon,posEarth) #Calculates acceleration of the Moon
+    
+        vCraftmid = vCraft + 0.5*a_craft*dt #Calculates midpoint velocity fort the spacecraft
+        vMoonmid = vMoon + 0.5*a_moon*dt #Calculates midpoint velocity fort the Moon
+
+        posCraft = posCraft + vCraftmid * dt #Updates the position of the spacecraft
+        posMoon = posMoon + vMoonmid * dt #Updates the position of the Moon
+    
+    
+        a_craft = CraftAccel(posCraft,posEarth,posMoon)# Gravity from Earth on craft
+        a_moon = moonAccel(posMoon,posEarth) #Calculates acceleration on the Moon
+    
+        vCraft = vCraftmid + 0.5*a_craft * dt #Updates the velocity of the spacecraft
+        vMoon = vMoonmid + 0.5*a_moon * dt #Updates the velocity of the Moon
+
+       # Burn 1 (prograde)
+        if tstart < t < tend: #Checks if t is inside the parameters of the first burn time
+           vhat = vCraft / np.linalg.norm(vCraft) #
+           vCraft = vCraft + vhat * thrustmag/mCraft * dt  #
+           mCraft -= mdot * dt #
+           if mCraft <= massPayload: #Checks to see if the craft runs out of fuel
+               mdot = 0 #Stops using fuel and ends the thrust
+           
+   
+       # Burn 2 (retrograde)
+        if tstart2 < t < tend2: #Checks if t is inside the parameters of the second burn time
+           vhat = vCraft / np.linalg.norm(vCraft) #
+           vCraft = vCraft - vhat * thrustmag/mCraft * dt #
+           mCraft -= mdot * dt #
+           if mCraft <= massPayload: #Checks to see if the craft runs out of fuel
+               mdot = 0 #Stops using fuel and ends the thrust
+        """
+        #burn 3
+        if tstart3 < t < tend3:
+            vhat = vCraft / np.linalg.norm(vCraft)
+            vCraft = vCraft - vhat * thrustmag/mCraft * dt
+            mCraft -= mdot * dt
+        """
+        #
+        
+        # Store
+        craft_pos[i] = posCraft #Saves the spacecrafts position
+        moon_pos[i]  = posMoon #Saves the Moons position
+        craft_mass[i] = mCraft #Saves the mass of the spacecraft
+        craft_vel[i] = vCraft #Saves the velocity of the spacecraft
+        dscm[i] = np.linalg.norm(posCraft - posMoon) #Saves the distance between the spacecraft and the Moon
+    
+        # Crash check
+        if np.linalg.norm(posCraft) < rEarth + 1e5: #Checks to see if the craft is too close to Earth
+            print(f"Crashed at t={t}s") #Prints out time of crash
+            crashed = True #Sets crashed from false to true
+            crash_step = i #Saves the crash time
+            break #Ends simulation
+    
+    # Trim if crashed
+    if crashed: #Checks if the craft crashed
+        craft_pos = craft_pos[:crash_step+1] #
+        moon_pos  = moon_pos[:crash_step+1] #
+        craft_mass = craft_mass[:crash_step+1] #
+        times = times[:crash_step+1] #
+
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(10, 10)) #Creates first figure and axes for the trajectory graph
+    ax.set_aspect('equal') #Makes the x andy scale values equal
+    ax.plot(craft_pos[:, 0], craft_pos[:, 1], 'r-', lw=1, label='Craft trajectory') #Plots spacecraft's path
+    ax.plot(moon_pos[:, 0], moon_pos[:, 1], 'gray', lw=1, ls='--', label='Moon trajectory') #Plots Moon's path
+    
+    # Earth and final Moon position
+    ax.add_patch(plt.Circle((0, 0), rEarth, color='blue', label='Earth')) #Creates Earth on the graph, at (0,0) as a blue dot
+    ax.add_patch(plt.Circle(moon_pos[-1], rMoon, color='gray', label='Moon (final)')) #Creates the final Moon position
+    ax.add_patch(plt.Circle(moon_pos[tend*dt],rMoon,color='red',label='Moon @ timeburn1')) #Creates Moon at burn 1
+    ax.add_patch(plt.Circle(moon_pos[tend2*dt],rMoon,color='orange',label='Moon @ timeburn2')) #Creates Moon at burn 2
+    
+    # Mark start
+    ax.plot(craft_pos[0, 0], craft_pos[0, 1], 'g^', markersize=10, label='Start') #Starting Point
+    ax.plot(craft_pos[-1, 0], craft_pos[-1, 1], 'rv', markersize=10, label='End') #End point
+    
+    def pos_at_time(t_target): #
+        idx = int(t_target / dt) #
+        if idx >= len(craft_pos): #
+            return None, None #
+        return craft_pos[idx], idx #
+
+     burns = [ #Creates a list of burn information
+         (tstart,  'Burn 1 start',  'red',    +1), #Burn 1 Start
+         (tend,    'Burn 1 end',    'red',    +1), #Burn 1 End
+         (tstart2, 'Burn 2 start',  'orange', -1), #Burn 2 Start
+         (tend2,   'Burn 2 end',    'orange', -1), #Burn 2 End
+         (tstart3, 'Burn 3 start',  'purple', -1), #Burn 3 Start
+         (tend3,   'Burn 3 end',    'purple', -1), #Burn 3 End
+     ]
+     
+     for t_burn, label, color, sign in burns: #
+         p, idx = pos_at_time(t_burn)#
+         if p is None: #
+             continue #
+         # Marker at burn location
+         ax.plot(p[0], p[1], 'o', color=color, markersize=8, zorder=5) #
+         # Label with timestamp
+         ax.annotate(f'{label}\nt={t_burn}s', #
+                     xy=(p[0], p[1]), #
+                     xytext=(15, 15), textcoords='offset points', #
+                     fontsize=8, color=color, #
+                     arrowprops=dict(arrowstyle='->', color=color, lw=0.8)) #
+         # Optional: thrust direction arrow
+         v = craft_vel[idx] #
+         vhat = v / np.linalg.norm(v) #
+         arrow_len = 1.5e5 #
+         ax.arrow(p[0], p[1], sign*vhat[0]*arrow_len, sign*vhat[1]*arrow_len, #
+                  head_width=4e4, color=color, alpha=0.6, zorder=4) #
+     
+     ax.set_xlabel('x (m)') #Labels x-axis
+     ax.set_ylabel('y (m)') #Labels y-axisa
+     ax.set_title(f'Earth-Moon Trajectory ({t_total}s)') #Adds the plot title
+     leg = ax.legend() #Creates a legend
+     leg.set_draggable(True) #Makes the legend draggable
+     ax.grid(alpha=0.3) #Adds grid
+     
+     fig, ax = plt.subplots(figsize=(10, 5)) #Creates a second plot
+     ax.plot(times, craft_mass, 'b-', lw=1.5) #PLots spacecraft mass over time
+     
+     # Mark burn windows with shaded regions
+     ax.axvspan(tstart, tend, alpha=0.3, color='red', label='Burn 1 (prograde)') #
+     ax.axvspan(tstart2, tend2, alpha=0.3, color='orange', label='Burn 2 (retrograde)') #
+     
+     # Reference line for dry mass
+     ax.axhline(massPayload, color='gray', ls='--', lw=1, label=f'Dry mass ({massPayload:.0f} kg)') #
+     
+     ax.set_xlabel('Time (s)') #Labels x-axis
+     ax.set_ylabel('Craft mass (kg)') #Labels y-axis
+     ax.set_title('Spacecraft Mass vs Time') #Adds the plot title
+     leg = ax.legend() #Creates a legend
+     leg.set_draggable(True) #Makes the legend draggable
+     ax.grid(alpha=0.3) #Creates a gird
+     
+     idx_closest = np.argmin(dscm) #
+     t__closest = idx_closest*dt #
+     print(f"Closest lunar approach {round((np.min(dscm-rMoon)/1e3),2)} km") #Prints closes distance to Moon
+     print(f"At time:{t__closest}") #Prints time of closest distance to Moon
+     plt.show() #Shows the plots
