@@ -75,7 +75,7 @@ def moonAccel(posMoon,posEarth): #Def function to calculate Moon's acceleration
 
     return a #Returns the Moon's acceleration value
 
-if __name__ == "__main__":
+if __name__ == "__main__": #if this file is being directly run, the following runs, if function from file is called elsewhere, python ignores the following
 
     for i in range(n_steps): #
         t = i * dt #Adds a tick to the t count
@@ -112,14 +112,7 @@ if __name__ == "__main__":
            mCraft -= mdot * dt #
            if mCraft <= massPayload: #Checks to see if the craft runs out of fuel
                mdot = 0 #Stops using fuel and ends the thrust
-        """
-        #burn 3
-        if tstart3 < t < tend3:
-            vhat = vCraft / np.linalg.norm(vCraft)
-            vCraft = vCraft - vhat * thrustmag/mCraft * dt
-            mCraft -= mdot * dt
-        """
-        #
+
         
         # Store
         craft_pos[i] = posCraft #Saves the spacecrafts position
@@ -135,14 +128,7 @@ if __name__ == "__main__":
             crash_step = i #Saves the crash time
             break #Ends simulation
     
-    # Trim if crashed
-    if crashed: #Checks if the craft crashed
-        craft_pos = craft_pos[:crash_step+1] #
-        moon_pos  = moon_pos[:crash_step+1] #
-        craft_mass = craft_mass[:crash_step+1] #
-        times = times[:crash_step+1] #
-
-
+    
     # Plot
     fig, ax = plt.subplots(figsize=(10, 10)) #Creates first figure and axes for the trajectory graph
     ax.set_aspect('equal') #Makes the x andy scale values equal
